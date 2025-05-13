@@ -1,6 +1,6 @@
 use heck::{ToKebabCase, ToLowerCamelCase, ToPascalCase, ToSnakeCase};
 use std::collections::HashMap;
-use syn::{Attribute, Meta, NestedMeta};
+use syn::{Attribute};
 
 pub type ParsedAttributeMap = HashMap<String, String>;
 
@@ -11,28 +11,22 @@ pub type ParsedAttributeMap = HashMap<String, String>;
 pub(crate) fn parse_attributes(attributes: &[Attribute]) -> ParsedAttributeMap {
     let mut attr_map = HashMap::new();
     for attribute in attributes {
-        if !attribute.path.is_ident("redis") {
+        if !attribute.path().is_ident("redis") {
             continue;
         }
-
-        if let Ok(Meta::List(meta)) = attribute.parse_meta() {
-            if meta.path.is_ident("redis") {
-                for nested_meta in meta.nested {
-                    if let NestedMeta::Meta(Meta::NameValue(name_value)) = nested_meta {
-                        let attr_name = name_value
-                            .path
-                            .get_ident()
-                            .expect("Attribute name expected")
-                            .to_string();
-                        let attr_value = match &name_value.lit {
-                            syn::Lit::Str(lit_str) => lit_str.value(),
-                            _ => panic!("Attribute value must be a string literal"),
-                        };
-                        attr_map.insert(attr_name, attr_value);
-                    }
-                }
-            }
-        }
+        attribute.parse_nested_meta(|nested_meta| {
+            let attr_name = nested_meta
+                .path
+                .require_ident()?
+                .to_string();
+            let attr_value = match nested_meta.value()?.parse()? {
+                syn::Lit::Str(lit_str) => lit_str.value(),
+                _ => return Err(nested_meta.error("Attribute value must be a string literal")),
+            };
+            attr_map.insert(attr_name, attr_value);
+            
+            Ok(())
+        }).unwrap();
     }
     attr_map
 }

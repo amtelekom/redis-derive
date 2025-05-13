@@ -1,6 +1,6 @@
 [package]
 name = "redis-derive"
-version = "0.1.7"
+version = "0.2.0"
 edition = "2021"
 authors = ["Michael van Straten", "kkharji"]
 repository = "https://github.com/kkharji/redis-derive"
@@ -12,10 +12,10 @@ description = "This crate implements the redis::FromRedisValue and redis::ToRedi
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-redis = "0.21.5"
+redis = "0.31.0"
 quote = "1.0.10"
-syn = { version = "1.0", features = ["extra-traits"] }
-heck = "0.4.1"
+syn = { version = "2.0", features = ["extra-traits", "parsing"] }
+heck = "0.5.0"
 
 [lib]
 proc-macro = true
