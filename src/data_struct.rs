@@ -106,27 +106,25 @@ impl DeriveFromRedisArgs for DataStruct {
                     impl redis::FromRedisValue for #type_ident {
                         fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
                             match v {
-                                redis::Value::Bulk(bulk_data) if bulk_data.len() % 2 == 0 => {
+                                redis::Value::Map(bulk_data) => {
                                     let mut fields_hashmap = std::collections::HashMap::new();
-                                    for values in bulk_data.chunks(2) {
-                                        let full_identifier : String = redis::from_redis_value(&values[0])?;
+                                    for values in bulk_data {
+                                        let full_identifier : String = redis::from_redis_value(&values.0)?;
                                         match full_identifier.split_once(".") {
-                                            Some((field_identifier, split_of_section)) => {
+                                            Some((field_identifier, split_off_section)) => {
                                                 match fields_hashmap.get_mut(field_identifier) {
-                                                    Some(redis::Value::Bulk(bulk)) => {
-                                                        bulk.push(redis::Value::Data(split_of_section.chars().map(|c| c as u8).collect()));
-                                                        bulk.push(values[1].clone())
+                                                    Some(redis::Value::Map(bulk)) => {
+                                                        bulk.push((redis::Value::SimpleString(split_off_section.to_owned()), values.1.clone()));
                                                     },
                                                     _ => {
-                                                        let mut new_bulk : Vec<redis::Value> = Vec::new();
-                                                        new_bulk.push(redis::Value::Data(split_of_section.chars().map(|c| c as u8).collect()));
-                                                        new_bulk.push(values[1].clone());
-                                                        fields_hashmap.insert(field_identifier.to_owned(), redis::Value::Bulk(new_bulk));
+                                                        let mut new_bulk : Vec<(redis::Value,redis::Value)> = Vec::new();
+                                                        new_bulk.push((redis::Value::SimpleString(split_off_section.to_owned()), values.1.clone()));
+                                                        fields_hashmap.insert(field_identifier.to_owned(), redis::Value::Map(new_bulk));
                                                     }
                                                 }
                                             },
                                             None => {
-                                                fields_hashmap.insert(full_identifier, values[1].clone());
+                                                fields_hashmap.insert(full_identifier, values.1.clone());
                                             }
                                         }
                                     }
@@ -142,7 +140,7 @@ impl DeriveFromRedisArgs for DataStruct {
                                 },
                                 _ => Err(redis::RedisError::from((
                                     redis::ErrorKind::TypeError,
-                                    "the data returned from the redis database was not in the bulk data format or the length of the bulk data is not devisable by two"))
+                                    "the data returned from the redis database was not in the map data format: {v:?}"))
                                 )
                             }
                         }
@@ -159,27 +157,26 @@ impl DeriveFromRedisArgs for DataStruct {
                     impl redis::FromRedisValue for #type_ident {
                         fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
                             match v {
-                                redis::Value::Bulk(bulk_data) if bulk_data.len() % 2 == 0 => {
+                                redis::Value::Map(bulk_data) => {
                                     let mut fields_hashmap = std::collections::HashMap::new();
-                                    for values in bulk_data.chunks(2) {
-                                        let full_identifier : String = redis::from_redis_value(&values[0])?;
+                                    for values in bulk_data {
+                                        let full_identifier : String = redis::from_redis_value(&values.0)?;
                                         match full_identifier.split_once(".") {
-                                            Some((field_identifier, split_of_section)) => {
+                                            Some((field_identifier, split_off_section)) => {
                                                 match fields_hashmap.get_mut(field_identifier) {
-                                                    Some(redis::Value::Bulk(bulk)) => {
-                                                        bulk.push(redis::Value::Data(split_of_section.chars().map(|c| c as u8).collect()));
-                                                        bulk.push(values[1].clone())
+                                                    Some(redis::Value::Map(bulk)) => {
+                                                        bulk.push(redis::Value::SimpleString(split_off_section.to_owned()));
+                                                        bulk.push(values.1.clone())
                                                     },
                                                     _ => {
-                                                        let mut new_bulk : Vec<redis::Value> = Vec::new();
-                                                        new_bulk.push(redis::Value::Data(split_of_section.chars().map(|c| c as u8).collect()));
-                                                        new_bulk.push(values[1].clone());
-                                                        fields_hashmap.insert(field_identifier.to_owned(), redis::Value::Bulk(new_bulk));
+                                                        let mut new_bulk : Vec<(redis::Value, redis::Value)> = Vec::new();
+                                                        new_bulk.push((redis::Value::SimpleString(split_off_section.to_owned()),values.1.clone()));
+                                                        fields_hashmap.insert(field_identifier.to_owned(), redis::Value::Map(new_bulk));
                                                     }
                                                 }
                                             },
                                             None => {
-                                                fields_hashmap.insert(full_identifier, values[1].clone());
+                                                fields_hashmap.insert(full_identifier, values.1.clone());
                                             }
                                         }
                                     }

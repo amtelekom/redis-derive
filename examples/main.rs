@@ -39,7 +39,7 @@ fn main() -> redis::RedisResult<()> {
         group: Group::AdminGroup,
     };
 
-    let _ = redis::cmd("HSET")
+    let _: () = redis::cmd("HSET")
         .arg("test1")
         .arg(&test1)
         .query(&mut con)?;
